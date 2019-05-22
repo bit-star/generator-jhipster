@@ -35,21 +35,47 @@ for (idx in relationships) {
 }
 table.push(header);
 
+// Set number of rows to be generated
+let numberOfRows = 10;
+for (idx in relationships) {
+    if ( relationships[idx].useJPADerivedIdentifier === true ) {
+        const otherEntityNameCapitalized = relationships[idx].otherEntityNameCapitalized;
+        if (otherEntityNameCapitalized === 'User') {
+            // there are only 4 user records by default
+            numberOfRows = 4;
+        }
+        break;
+    }
+}
+
+// store unique values
+const uniqueValues = {};
+for (idx in fields) {
+    if (fields[idx].fieldValidate === true && fields[idx].fieldValidateRules.includes('unique')) {
+        uniqueValues[idx] = [];
+    }
+}
+
 // Generate CSV rows
 
-for (lineNb = 1; lineNb <= 10; lineNb++) {
+for (lineNb = 1; lineNb <= numberOfRows; lineNb++) {
     let line = [ lineNb ];
     for (idx in fields) {
         let data = '';
         let columnType = fields[idx].columnType;
-        let fieldType = fields[idx].fieldType;
         if (columnType === 'integer'
             || columnType === 'bigint'
             || columnType === 'double'
             || columnType.startsWith('decimal')) {
-            data = this.faker.random.number();
+            data = this.faker.random.number({
+                max: fields[idx].fieldValidateRulesMax ? parseInt(fields[idx].fieldValidateRulesMax) : undefined,
+                min: fields[idx].fieldValidateRulesMin ? parseInt(fields[idx].fieldValidateRulesMin) : undefined
+            });
         } else if (columnType === '${floatType}') {
-            data = this.faker.random.number();
+            data = this.faker.random.number({
+                max: fields[idx].fieldValidateRulesMax ? parseFloat(fields[idx].fieldValidateRulesMax) : undefined,
+                min: fields[idx].fieldValidateRulesMin ? parseFloat(fields[idx].fieldValidateRulesMin) : undefined
+            });
         } else if (columnType === 'boolean') {
             data = this.faker.random.boolean();
         } else if (columnType === 'date' || columnType === 'datetime') {
@@ -99,28 +125,69 @@ for (lineNb = 1; lineNb <= 10; lineNb++) {
             } else {
                 data = this.faker.random.words();
             }
-            // manage String max length
-            if (fields[idx].fieldValidate === true && fields[idx].fieldValidateRules.includes('maxlength')) {
-                let maxlength = fields[idx].fieldValidateRulesMaxlength;
-                data = data.substring(0, maxlength);
-            }
         }
         if (fields[idx].fieldIsEnum) {
             if (fields[idx].fieldValues.length !== 0) {
                 const enums = fields[idx].fieldValues.split(',');
-                data = enums[0];
+                data = enums[Math.floor(Math.random() * Math.floor(enums.length))];
             } else {
                 data = '';
             }
         }
-        if (fieldType === 'byte[]') {
-            data = Buffer.from(this.faker.random.words(), 'utf8').toString('hex');
+        if (columnType === 'blob' || columnType === 'longblob') {
+            data = '../data/blob/hipster.png'
+        } else if (columnType === '${clobType}'){
+            data = '../data/blob/hipster.txt'
         }
+
+        // Validation rules
+        if (fields[idx].fieldValidate === true) {
+            if (fields[idx].fieldValidateRules.includes('pattern')) {
+                data = new this.randexp(fields[idx].fieldValidateRulesPattern).gen();
+            }
+
+            // manage String max length
+            if (fields[idx].fieldValidateRules.includes('maxlength')) {
+                let maxlength = fields[idx].fieldValidateRulesMaxlength;
+                data = data.substring(0, maxlength);
+            }
+
+            // manage String min length
+            if (fields[idx].fieldValidateRules.includes('minlength')) {
+                let minlength = fields[idx].fieldValidateRulesMinlength;
+                data = data.length > minlength ? data : data + "X".repeat(minlength - data.length);
+            }
+
+            // test if generated data is still compatible with the regexp as we potentially modify it with min/maxLength
+            if (
+                fields[idx].fieldValidateRules.includes("pattern") &&
+                !new RegExp("^" + fields[idx].fieldValidateRulesPattern + "$").test(data)
+            ) {
+                data = "";
+            }
+
+            // manage uniqueness
+            if (fields[idx].fieldValidateRules.includes('unique')) {
+                if (uniqueValues[idx].indexOf(data) !== -1) {
+                    data = '';
+                } else {
+                    uniqueValues[idx].push(data);
+                }
+            }
+
+            // manage required
+            if (fields[idx].fieldValidateRules.includes('required') && data === '') {
+                line = [];
+                break;
+            }
+        }
+
         line.push(data);
-        if (fieldType === 'byte[]' && fields[idx].fieldTypeBlobContent !== 'text') {
+        if (columnType === 'blob' || columnType === 'longblob') {
             line.push('image/png');
         }
     }
+
     for (idx in relationships) {
         if (relationships[idx].relationshipValidate === true && relationships[idx].relationshipRequired) {
             if (relationships[idx].otherEntityNameCapitalized === 'User') {
@@ -130,7 +197,10 @@ for (lineNb = 1; lineNb <= 10; lineNb++) {
             }
         }
     }
-    table.push(line);
+
+    if (line.length === (1 + fields.length + relationships.length)) {
+        table.push(line);
+    }
 }
 
 let result = table

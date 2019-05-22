@@ -28,7 +28,9 @@ Support this project by becoming a sponsor! [Become a sponsor](https://opencolle
 
 [![CodeFirst][codefirst-image]][codefirst-url]
 
-[![TalentPlot][talentplot-image]][talentplot-url]
+[![Blokt][blokt-image]][blokt-url]
+
+[![Clay][clay-image]][clay-url]
 
 **Thank you to all our backers!**
 
@@ -99,8 +101,10 @@ Additional builds at [hipster-labs/jhipster-daily-builds](https://github.com/hip
 [intesys-url]: https://www.intesys.it/
 [codefirst-image]: https://www.jhipster.tech/images/open-collective/codefirst.png
 [codefirst-url]: https://www.codefirst.co.uk
-[talentplot-image]: https://www.jhipster.tech/images/open-collective/talentplot.png
-[talentplot-url]: https://talentplot.com/
+[blokt-image]: https://www.jhipster.tech/images/open-collective/blokt.png
+[blokt-url]: https://blokt.com/
+[clay-image]: https://www.jhipster.tech/images/open-collective/clay.png
+[clay-url]: https://clay.global/
 [issue-template]: https://github.com/jhipster/generator-jhipster/issues/new?template=BUG_REPORT.md
 [feature-template]: https://github.com/jhipster/generator-jhipster/issues/new?template=FEATURE_REQUEST.md
 [npmcharts-image]: https://img.shields.io/npm/dm/generator-jhipster.svg?label=Downloads&style=flat

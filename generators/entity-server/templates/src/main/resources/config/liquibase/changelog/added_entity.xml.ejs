@@ -24,30 +24,17 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd
                         http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 
-    <property name="now" value="now()" dbms="h2"/>
-    <% let autoIncrementValue = true;
+    <%_ let autoIncrementValue = true;
         for (idx in relationships) {
             if (relationships[idx].useJPADerivedIdentifier === true) {
                 autoIncrementValue = false;
                 break;
             }
-        }%>
+        }
+    _%>
     <%_ if (prodDatabaseType === 'mysql' || prodDatabaseType === 'mariadb') { _%>
-    <property name="now" value="now()" dbms="mysql"/>
     <property name="autoIncrement" value="<%- autoIncrementValue %>"/>
     <%_ } _%>
-    <%_ if (prodDatabaseType === 'postgresql') { _%>
-    <property name="now" value="current_timestamp" dbms="postgresql"/>
-    <%_ } _%>
-    <%_ if (prodDatabaseType === 'oracle') { _%>
-    <property name="now" value="sysdate" dbms="oracle"/>
-    <%_ } _%>
-    <%_ if (prodDatabaseType === 'mssql') { _%>
-    <property name="now" value="GETDATE()" dbms="mssql"/>
-    <%_ } _%>
-
-    <property name="floatType" value="float4" dbms="postgresql, h2"/>
-    <property name="floatType" value="float" dbms="mysql, oracle, mssql, mariadb"/>
 
     <!--
         Added the entity <%= entityClass %>.
@@ -95,6 +82,8 @@
                 columnType="datetime";
             } else if (fieldType === 'ZonedDateTime') {
                 columnType="datetime";
+            } else if (fieldType === 'Duration') {
+                columnType="bigint";
             } else if (fieldType === 'byte[]' && fieldTypeBlobContent !== 'text') {
                 if (prodDatabaseType === 'mysql' || prodDatabaseType === 'postgresql' || prodDatabaseType === 'mariadb') {
                     columnType="longblob";
@@ -102,7 +91,7 @@
                     columnType="blob";
                 }
             } else if (fieldTypeBlobContent === 'text') {
-                columnType="clob";
+                columnType="${clobType}";
             } else if (fieldType === 'Boolean') {
                 columnType="boolean";
             }
@@ -121,8 +110,9 @@
                 <%_ } _%>
             </column>
                 <%_ if (fieldType === 'byte[]' && fieldTypeBlobContent !== 'text') {
-                    columnType = "varchar(255)"; _%>
-            <column name="<%=columnName %>_content_type" type="<%=columnType %>">
+                    let contentTypeColumnType = columnType;
+                    contentTypeColumnType = "varchar(255)"; _%>
+            <column name="<%=columnName %>_content_type" type="<%=contentTypeColumnType%>">
                 <constraints nullable="<%= nullable %>" />
             </column>
                 <%_ } _%>
@@ -178,7 +168,7 @@
             <%_ for (idx in fields) {
                 let loadColumnType = 'string';
                 let columnType = fields[idx].columnType;
-                if (columnType === 'integer' || columnType === 'bigint' || columnType === 'double' || columnType === 'decimal(10,2)' || columnType === '${floatType}') {
+                if (columnType === 'integer' || columnType === 'bigint' || columnType === 'double' || columnType === 'decimal(21,2)' || columnType === '${floatType}') {
                     loadColumnType = 'numeric';
                 } else if (columnType === 'date' || columnType === 'datetime') {
                     loadColumnType = 'date';
@@ -186,8 +176,10 @@
                     loadColumnType = 'boolean';
                 } else if (fields[idx].fieldIsEnum) {
                     loadColumnType = 'string';
-                } else if (columnType === 'clob' || columnType === 'blob' || columnType === 'longblob') {
-                    loadColumnType = 'string';
+                } else if (columnType === 'blob' || columnType === 'longblob') {
+                    loadColumnType = 'blob';
+                } else if (columnType === '${clobType}') {
+                    loadColumnType = 'clob';
                 }
                 _%>
             <column name="<%=fields[idx].fieldNameAsDatabaseColumn%>" type="<%=loadColumnType%>"/>
@@ -195,6 +187,16 @@
             <column name="<%=fields[idx].fieldNameAsDatabaseColumn%>_content_type" type="string"/>
                 <%_ } _%>
             <%_ } _%>
+            <%_ for (idx in relationships) {
+                    let loadColumnType = 'numeric';
+                    if (relationships[idx].relationshipValidate === true && relationships[idx].relationshipRequired) {
+                        let baseColumnName = getColumnName(relationships[idx].relationshipName) + '_id';
+                        if (relationships[idx].otherEntityNameCapitalized === 'User' && authenticationType === 'oauth2') {
+                            loadColumnType = 'varchar(100)';
+                        } _%>
+            <column name="<%=baseColumnName%>" type="<%=loadColumnType%>"/>
+                <%_ } _%>
+            <%_  } _%>
         </loadData>
     </changeSet>
 

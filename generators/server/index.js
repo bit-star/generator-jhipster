@@ -121,13 +121,16 @@ module.exports = class extends BaseBlueprintGenerator {
                 this.DOCKER_CONSUL = constants.DOCKER_CONSUL;
                 this.DOCKER_CONSUL_CONFIG_LOADER = constants.DOCKER_CONSUL_CONFIG_LOADER;
                 this.DOCKER_SWAGGER_EDITOR = constants.DOCKER_SWAGGER_EDITOR;
+                this.DOCKER_PROMETHEUS = constants.DOCKER_PROMETHEUS;
+                this.DOCKER_GRAFANA = constants.DOCKER_GRAFANA;
 
                 this.JAVA_VERSION = constants.JAVA_VERSION;
-                this.SCALA_VERSION = constants.SCALA_VERSION;
 
                 this.NODE_VERSION = constants.NODE_VERSION;
                 this.YARN_VERSION = constants.YARN_VERSION;
                 this.NPM_VERSION = constants.NPM_VERSION;
+
+                this.JIB_VERSION = constants.JIB_VERSION;
 
                 this.packagejs = packagejs;
                 const configuration = this.getAllJhipsterConfig(this, true);
@@ -186,19 +189,14 @@ module.exports = class extends BaseBlueprintGenerator {
                     this.prodDatabaseType = 'cassandra';
                     this.enableHibernateCache = false;
                 } else if (this.databaseType === 'no') {
-                    // no database, only available for microservice applications
                     this.devDatabaseType = 'no';
                     this.prodDatabaseType = 'no';
                     this.enableHibernateCache = false;
+                    this.skipUserManagement = true;
                 } else {
                     // sql
                     this.devDatabaseType = configuration.get('devDatabaseType');
                     this.prodDatabaseType = configuration.get('prodDatabaseType');
-                }
-
-                // Hazelcast is mandatory for Gateways, as it is used for rate limiting
-                if (this.applicationType === 'gateway' && this.serviceDiscoveryType) {
-                    this.cacheProvider = 'hazelcast';
                 }
 
                 this.buildTool = configuration.get('buildTool');
@@ -245,7 +243,7 @@ module.exports = class extends BaseBlueprintGenerator {
                 }
 
                 if (this.entitySuffix === this.dtoSuffix) {
-                    this.error(chalk.red('Entities cannot be generated as the entity suffix and DTO suffix are equals !'));
+                    this.error('Entities cannot be generated as the entity suffix and DTO suffix are equals !');
                 }
 
                 const serverConfigFound =
@@ -442,6 +440,9 @@ module.exports = class extends BaseBlueprintGenerator {
                 }
                 if (this.configOptions.clientFramework) {
                     this.clientFramework = this.configOptions.clientFramework;
+                }
+                if (this.configOptions.skipClient) {
+                    this.skipClient = this.configOptions.skipClient;
                 }
                 if (this.configOptions.uaaBaseName !== undefined) {
                     this.uaaBaseName = this.configOptions.uaaBaseName;
